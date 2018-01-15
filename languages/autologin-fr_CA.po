@@ -1,0 +1,43 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: AutoLogin\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-01-15 19:30+0000\n"
+"PO-Revision-Date: 2018-01-15 19:30+0000\n"
+"Last-Translator: lewebsimple <tech@lewebsimple.ca>\n"
+"Language-Team: French (Canada)\n"
+"Language: fr-CA\n"
+"Plural-Forms: nplurals=2; plural=n > 1\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Loco - https://localise.biz/"
+
+#: autologin.php:61
+msgid "Invalid user."
+msgstr "Utilisateur invalide."
+
+#: autologin.php:64
+msgid "AutoLogin authentication failed."
+msgstr "L'authentification AutoLogin a échoué."
+
+#. Name of the plugin
+msgid "AutoLogin"
+msgstr "AutoLogin"
+
+#. Description of the plugin
+msgid "Generate password-less login links for users."
+msgstr ""
+"Générer des liens de connexion sans mot de passe pour les utilisateurs."
+
+#. URI of the plugin
+msgid "https://gitlab.ledevsimple.ca/wordpress/autologin"
+msgstr "https://gitlab.ledevsimple.ca/wordpress/autologin"
+
+#. Author of the plugin
+msgid "Pascal Martineau <pascal@lewebsimple.ca>"
+msgstr "Pascal Martineau <pascal@lewebsimple.ca>"
+
+#. Author URI of the plugin
+msgid "https://lewebsimple.ca"
+msgstr "https://lewebsimple.ca"

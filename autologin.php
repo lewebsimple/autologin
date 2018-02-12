@@ -104,3 +104,19 @@ function autologin_randomness( $min, $max = null ) {
 
 	return bin2hex( random_bytes( random_int( $min, $max ) ) );
 }
+
+// Helper: Get existing autologin link
+function autologin_get_existing_link( $user_id ) {
+	global $wpdb;
+	$option = json_decode( get_option( AUTOLOGIN_OPTION ) );
+
+	$query   = "SELECT * FROM {$wpdb->prefix}options WHERE option_value LIKE '{\"user\":{$user_id},%'";
+	$results = $wpdb->get_results( $query, ARRAY_A );
+	if ( empty( $results ) ) {
+		return false;
+	}
+	$transient = reset( $results );
+	$public = explode('/', $transient['option_name'])[1];
+
+	return home_url( "$option->endpoint/$public" );
+}

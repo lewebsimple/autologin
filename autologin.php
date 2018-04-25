@@ -118,5 +118,14 @@ function autologin_get_existing_link( $user_id ) {
 	$transient = reset( $results );
 	$public = explode('/', $transient['option_name'])[1];
 
+	// Check if existing link is still valid
+	$magic = json_decode( get_transient( AUTOLOGIN_OPTION . '/' . $public ) );
+	if ( empty( $magic->user ) || ( ! $user = new WP_User( $magic->user ) ) || ! $user->exists() ) {
+		return false;
+	}
+	if ( empty( $magic->private ) || ! wp_check_password( autologin_signature( $public, $user->ID ), $magic->private ) ) {
+		return false;
+	}
+
 	return home_url( "$option->endpoint/$public" );
 }

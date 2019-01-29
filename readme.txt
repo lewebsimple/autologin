@@ -11,5 +11,8 @@ Generate password-less login links for users.
 
 == Changelog ==
 
+= 0.2.0 =
+* Automatically re-use existing links (autologin_generate_link)
+
 = 0.1.0 =
 * Initial plugin structure

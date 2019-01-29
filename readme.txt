@@ -13,6 +13,7 @@ Generate password-less login links for users.
 
 = 0.2.0 =
 * Automatically re-use existing links (autologin_generate_link)
+* Add 'autologin' shortcode (USE WITH CARE)
 
 = 0.1.0 =
 * Initial plugin structure

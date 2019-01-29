@@ -119,3 +119,18 @@ function autologin_generate_link( $user_id, $redirect = '/', $expiration = AUTOL
 
 	return home_url( "$endpoint/$public" );
 }
+
+// Register [autologin] shortcode (USE WITH CARE)
+add_shortcode( 'autologin', 'autologin_shortcode' );
+function autologin_shortcode( $atts ) {
+	$atts = shortcode_atts( array(
+		'user_id'    => '',
+		'redirect'   => '/',
+		'expiration' => AUTOLOGIN_DEFAULT_EXPIRATION,
+	), $atts, 'autologin' );
+	if ( empty( get_user_by( 'id', $atts['user_id'] ) ) ) {
+		return '';
+	}
+
+	return autologin_generate_link( $atts['user_id'], $atts['redirect'], $atts['expiration'] );
+}

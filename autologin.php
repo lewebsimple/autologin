@@ -7,7 +7,7 @@
  * Author URI:      https://lewebsimple.ca
  * Text Domain:     autologin
  * Domain Path:     /languages
- * Version:         0.1.0
+ * Version:         0.2.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -24,108 +24,98 @@ function autologin_plugins_loaded() {
 }
 
 // Create random endpoint when plugin is activated
-register_activation_hook( __FILE__, 'autologin_activate' );
-function autologin_activate() {
-	$option = array(
-		'endpoint' => autologin_randomness( 4 ),
-	);
-	update_option( AUTOLOGIN_OPTION, json_encode( $option ) );
-}
-
-// Destroy endpoint when plugin is deactivated
-register_deactivation_hook( __FILE__, 'autologin_deactivate' );
-function autologin_deactivate() {
-	delete_option( AUTOLOGIN_OPTION );
-}
-
-// Intercept login link request
-add_action( 'init', 'autologin_loaded' );
-function autologin_loaded() {
-	$request   = trim( $_SERVER['REQUEST_URI'], '/' );
-	$fragments = explode( '/', $request );
-	if ( 2 !== count( $fragments ) ) {
-		return;
+register_activation_hook( __FILE__, 'autologin_create_random_endpoint' );
+function autologin_create_random_endpoint() {
+	if ( empty( autologin_get_endpoint() ) ) {
+		$option = array(
+			'endpoint' => autologin_get_random_string( 4 ),
+		);
+		update_option( AUTOLOGIN_OPTION, json_encode( $option ) );
 	}
-	list( $endpoint, $public ) = $fragments;
-	autologin_handle( $endpoint, $public );
 }
 
-// Handle login link request
-function autologin_handle( $endpoint, $public ) {
-	$option = json_decode( get_option( AUTOLOGIN_OPTION ) );
-	if ( $endpoint !== $option->endpoint ) {
-		return;
-	}
-	$magic = json_decode( get_transient( AUTOLOGIN_OPTION . '/' . $public ) );
-	if ( empty( $magic->user ) || ( ! $user = new WP_User( $magic->user ) ) || ! $user->exists() ) {
-		wp_die( __( "Invalid user.", 'autologin' ) );
-	}
-	if ( empty( $magic->private ) || ! wp_check_password( autologin_signature( $public, $user->ID ), $magic->private ) ) {
-		wp_die( __( "AutoLogin authentication failed.", 'autologin' ) );
-	}
-	wp_set_auth_cookie( $user->ID );
-	wp_redirect( home_url( $magic->redirect ) );
-	exit;
+// Helper: Return stored autologin endpoint
+function autologin_get_endpoint() {
+	$option = json_decode( get_option( AUTOLOGIN_OPTION, '{}' ), true );
+
+	return empty( $option['endpoint'] ) ? false : $option['endpoint'];
 }
 
-// Generate pre-authorized login link for user
-function autologin_generate( $user_id, $redirect = '/', $expiration = AUTOLOGIN_DEFAULT_EXPIRATION ) {
-	$option = json_decode( get_option( AUTOLOGIN_OPTION ) );
-	$public = implode( '-', [
-		autologin_randomness( 3, 5 ),
-		autologin_randomness( 3, 5 ),
-		autologin_randomness( 3, 5 ),
-	] );
-
-	$private = wp_hash_password( autologin_signature( $public, $user_id ) );
-	$magic   = [
-		'user'     => $user_id,
-		'private'  => $private,
-		'redirect' => $redirect,
-		'time'     => time(),
-	];
-	set_transient( AUTOLOGIN_OPTION . '/' . $public, json_encode( $magic ), $expiration );
-
-	return home_url( "$option->endpoint/$public" );
-}
-
-// Generate signature to check against private key
-function autologin_signature( $public, $user_id ) {
-	$option = json_decode( get_option( AUTOLOGIN_OPTION ) );
-	$domain = parse_url( home_url(), PHP_URL_HOST );
-
-	return "$public|$option->endpoint|$domain|$user_id";
-}
-
-// Generate cryptographically secure pseudo-random string
-function autologin_randomness( $min, $max = null ) {
+// Helper: Generate cryptographically secure pseudo-random string
+function autologin_get_random_string( $min, $max = null ) {
 	$min = absint( $min );
 	$max = absint( $max ? $max : $min );
 
 	return bin2hex( random_bytes( random_int( $min, $max ) ) );
 }
 
-// Helper: Get existing autologin link
-function autologin_get_existing_link( $user_id ) {
-	global $wpdb;
-	$option = json_decode( get_option( AUTOLOGIN_OPTION ) );
+// Helper: Return signature to check against private key
+function autologin_get_signature( $public, $user_id ) {
+	$endpoint = autologin_get_endpoint();
+	$domain   = $_SERVER['SERVER_NAME'];
 
-	$query   = "SELECT * FROM {$wpdb->prefix}options WHERE option_value LIKE '{\"user\":{$user_id},%'";
-	$results = $wpdb->get_results( $query, ARRAY_A );
-	if ( empty( $results ) ) {
-		return false;
-	}
-	$transient = reset( $results );
-	$public = explode('/', $transient['option_name'])[1];
+	return "$public|$endpoint|$domain|$user_id";
+}
 
-	// Check if existing link is still valid
-	$magic = json_decode( get_transient( AUTOLOGIN_OPTION . '/' . $public ) );
-	if ( empty( $magic->user ) || ( ! $user = new WP_User( $magic->user ) ) || ! $user->exists() ) {
-		return false;
+// Helper: Generate encrypted public token from $user_id / $redirect
+function autologin_get_public_token( $user_id, $redirect = '/' ) {
+	return md5( json_encode( array(
+		'user_id'  => $user_id,
+		'redirect' => $redirect
+	) ) );
+}
+
+// Intercept autologin request (i.e. "$endpoint/$public")
+add_action( 'init', 'autologin_intercept_request' );
+function autologin_intercept_request() {
+	$request   = trim( $_SERVER['REQUEST_URI'], '/' );
+	$fragments = explode( '/', $request );
+	if ( 2 !== count( $fragments ) ) {
+		// This is not the request you're looking for...
+		return;
 	}
-	if ( empty( $magic->private ) || ! wp_check_password( autologin_signature( $public, $user->ID ), $magic->private ) ) {
-		return false;
+	list( $endpoint, $public ) = $fragments;
+	autologin_handle_request( $endpoint, $public );
+}
+
+// Handle autologin request
+function autologin_handle_request( $endpoint, $public ) {
+	if ( $endpoint !== autologin_get_endpoint() ) {
+		// This is not the request you're looking for...
+		return;
+	}
+	if ( empty( $transient = get_transient( AUTOLOGIN_OPTION . '/' . $public ) ) ) {
+		wp_die( __( "Missing or expired AutoLogin link.", 'autologin' ) );
+	}
+	$magic = json_decode( $transient, true );
+	if ( empty( $magic['user_id'] ) || empty( $user = get_user_by( 'id', $magic['user_id'] ) ) ) {
+		wp_die( __( "Missing or invalid user.", 'autologin' ) );
+	}
+	$signature = autologin_get_signature( $public, $magic['user_id'] );
+	if ( empty( $magic['private'] ) || ! wp_check_password( $signature, $magic['private'] ) ) {
+		wp_die( __( "AutoLogin authentication failed.", 'autologin' ) );
+	}
+	wp_set_auth_cookie( $magic['user_id'] );
+	wp_redirect( home_url( $magic['redirect'] ) );
+	exit;
+}
+
+// Helper: Generate autologin link from $user_id / $redirect
+function autologin_generate_link( $user_id, $redirect = '/', $expiration = AUTOLOGIN_DEFAULT_EXPIRATION ) {
+	$endpoint = autologin_get_endpoint();
+	$public   = autologin_get_public_token( $user_id, $redirect );
+	if ( empty( $existing = get_transient( AUTOLOGIN_OPTION . '/' . $public ) ) ) {
+		$private = wp_hash_password( autologin_get_signature( $public, $user_id ) );
+		$magic   = [
+			'user_id'  => $user_id,
+			'private'  => $private,
+			'redirect' => $redirect,
+			'time'     => time(),
+		];
+		set_transient( AUTOLOGIN_OPTION . '/' . $public, json_encode( $magic ), $expiration );
+	} else {
+		set_transient( AUTOLOGIN_OPTION . '/' . $public, $existing, $expiration );
 	}
 
-	return home_url( "$option->endpoint/$public" );
+	return home_url( "$endpoint/$public" );
 }

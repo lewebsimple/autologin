@@ -103,6 +103,7 @@ function autologin_handle_request( $endpoint, $public ) {
 // Helper: Generate autologin link from $user_id / $redirect
 function autologin_generate_link( $user_id, $redirect = '/', $expiration = AUTOLOGIN_DEFAULT_EXPIRATION ) {
 	$endpoint = autologin_get_endpoint();
+	$redirect = str_replace( home_url(), '', $redirect );
 	$public   = autologin_get_public_token( $user_id, $redirect );
 	if ( empty( $existing = get_transient( AUTOLOGIN_OPTION . '/' . $public ) ) ) {
 		$private = wp_hash_password( autologin_get_signature( $public, $user_id ) );

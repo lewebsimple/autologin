@@ -7,7 +7,7 @@
  * Author URI:      https://lewebsimple.ca
  * Text Domain:     autologin
  * Domain Path:     /languages
- * Version:         0.2.0
+ * Version:         0.2.1
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

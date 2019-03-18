@@ -11,6 +11,9 @@ Generate password-less login links for users.
 
 == Changelog ==
 
+= 0.2.2 =
+* Add autologin_failed_message filter
+
 = 0.2.1 =
 * Sanitize $redirect
 

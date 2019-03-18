@@ -17,6 +17,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'AUTOLOGIN_OPTION', 'autologin' );
 define( 'AUTOLOGIN_DEFAULT_EXPIRATION', DAY_IN_SECONDS * 30 );
 
+define( 'AUTOLOGIN_INVALID_LINK', 'link' );
+define( 'AUTOLOGIN_INVALID_USER', 'user' );
+define( 'AUTOLOGIN_INVALID_AUTH', 'auth' );
+
 // Load plugin textdomain
 add_action( 'plugins_loaded', 'autologin_plugins_loaded' );
 function autologin_plugins_loaded() {
@@ -85,15 +89,18 @@ function autologin_handle_request( $endpoint, $public ) {
 		return;
 	}
 	if ( empty( $transient = get_transient( AUTOLOGIN_OPTION . '/' . $public ) ) ) {
-		wp_die( __( "Missing or expired AutoLogin link.", 'autologin' ) );
+		$message = apply_filters( 'autologin_failed_message', __( "Missing or expired AutoLogin link.", 'autologin' ), AUTOLOGIN_INVALID_LINK );
+		wp_die( $message );
 	}
 	$magic = json_decode( $transient, true );
 	if ( empty( $magic['user_id'] ) || empty( $user = get_user_by( 'id', $magic['user_id'] ) ) ) {
-		wp_die( __( "Missing or invalid user.", 'autologin' ) );
+		$message = apply_filters( 'autologin_failed_message', __( "Missing or invalid user.", 'autologin' ), AUTOLOGIN_INVALID_USER );
+		wp_die( $message );
 	}
 	$signature = autologin_get_signature( $public, $magic['user_id'] );
 	if ( empty( $magic['private'] ) || ! wp_check_password( $signature, $magic['private'] ) ) {
-		wp_die( __( "AutoLogin authentication failed.", 'autologin' ) );
+		$message = apply_filters( 'autologin_failed_message', __( "AutoLogin authentication failed.", 'autologin' ), AUTOLOGIN_INVALID_AUTH );
+		wp_die( $message );
 	}
 	wp_set_auth_cookie( $magic['user_id'] );
 	wp_redirect( home_url( $magic['redirect'] ) );

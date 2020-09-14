@@ -7,7 +7,7 @@
  * Author URI:      https://lewebsimple.ca
  * Text Domain:     autologin
  * Domain Path:     /languages
- * Version:         0.2.2
+ * Version:         0.2.3
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -97,10 +97,12 @@ function autologin_handle_request( $endpoint, $public ) {
 		$message = apply_filters( 'autologin_failed_message', __( "Missing or invalid user.", 'autologin' ), AUTOLOGIN_INVALID_USER );
 		wp_die( $message );
 	}
-	$signature = autologin_get_signature( $public, $magic['user_id'] );
-	if ( empty( $magic['private'] ) || ! wp_check_password( $signature, $magic['private'] ) ) {
-		$message = apply_filters( 'autologin_failed_message', __( "AutoLogin authentication failed.", 'autologin' ), AUTOLOGIN_INVALID_AUTH );
-		wp_die( $message );
+	if ( get_option( 'autologin_check_signature' ) ) {
+		$signature = autologin_get_signature( $public, $magic['user_id'] );
+		if ( empty( $magic['private'] ) || ! wp_check_password( $signature, $magic['private'] ) ) {
+			$message = apply_filters( 'autologin_failed_message', __( "AutoLogin authentication failed.", 'autologin' ), AUTOLOGIN_INVALID_AUTH );
+			wp_die( $message );
+		}
 	}
 	wp_set_auth_cookie( $magic['user_id'] );
 	wp_redirect( home_url( $magic['redirect'] ) );

@@ -11,6 +11,9 @@ Generate password-less login links for users.
 
 == Changelog ==
 
+= 0.2.4 =
+* Configurable AUTOLOGIN_VALIDATE_DOMAIN and AUTOLOGIN_DEFAULT_EXPIRATION
+
 = 0.2.3 =
 * Optional signature checking through autologin_check_signature option
 
